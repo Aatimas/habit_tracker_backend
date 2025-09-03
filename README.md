@@ -8,4 +8,4 @@ Instructions:
 2. `npm install`
 3. Create Postgres DB (e.g. `psql -U postgres -c "CREATE DATABASE habit_tracker;"`)
 4. `npm run seed` (optional seed)
-5. `npm run start:dev`
+5. `npm run start:dev`# habit_tracker_backend
