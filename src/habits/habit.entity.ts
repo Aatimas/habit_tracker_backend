@@ -36,9 +36,6 @@ export class Habit {
   @Column({ default: 0 })
   longestStreak: number;
 
-  @Column('simple-array', { nullable: true })
-  completedDates?: string[];
-
   @CreateDateColumn()
   createdAt: Date;
 

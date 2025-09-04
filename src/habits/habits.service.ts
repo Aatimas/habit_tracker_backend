@@ -12,76 +12,94 @@ export class HabitsService {
 		@InjectRepository(HabitRecord) private recordRepo: Repository<HabitRecord>
 	) {}
 
-	/** Compute streaks and completion info from HabitRecords */
-	private async addComputedFields(habit: Habit) {
-		const today = new Date().toISOString().split("T")[0];
+	// 🔄 Utility: format today
+	private todayISO(): string {
+		return new Date().toISOString().split("T")[0];
+	}
 
-		// fetch all records for this habit
-		const records = await this.recordRepo.find({
-			where: { habit: { id: habit.id } },
-			order: { date: "ASC" },
-		});
-		const dates = records.map((r) => r.date);
-
-		// check if completed today
-		const completedToday = dates.includes(today);
-
-		// streak calculation (count backwards until a missed day)
-		let streak = 0;
-		let current = new Date(today);
-		while (dates.includes(current.toISOString().split("T")[0])) {
-			streak++;
-			current.setDate(current.getDate() - 1);
+	// 🔄 Utility: recalculate streaks from records
+	private recalcStreaks(habit: Habit) {
+		const dates = habit.records.map((r) => r.date).sort(); // ascending
+		if (dates.length === 0) {
+			habit.streak = 0;
+			habit.longestStreak = 0;
+			return habit;
 		}
 
-		// longest streak calculation
-		let longestStreak = 0;
-		let temp = 0;
-		for (let i = 0; i < dates.length; i++) {
-			const d = new Date(dates[i]);
-			if (i > 0) {
-				const prev = new Date(dates[i - 1]);
-				const diff = (d.getTime() - prev.getTime()) / 86400000;
-				if (diff === 1) {
-					temp++;
-				} else {
-					temp = 1;
-				}
+		let longest = 1;
+		let current = 1;
+
+		for (let i = 1; i < dates.length; i++) {
+			const prev = new Date(dates[i - 1]);
+			const curr = new Date(dates[i]);
+
+			// difference in days
+			const diff = Math.floor(
+				(curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
+			);
+
+			if (diff === 1) {
+				current++;
+				longest = Math.max(longest, current);
 			} else {
-				temp = 1;
+				current = 1;
 			}
-			if (temp > longestStreak) longestStreak = temp;
 		}
+
+		// check if streak is "active" (ends today or yesterday)
+		const last = dates[dates.length - 1];
+		const today = this.todayISO();
+		const yesterday = new Date(Date.now() - 86400000)
+			.toISOString()
+			.split("T")[0];
+
+		if (last === today || last === yesterday) {
+			habit.streak = current;
+		} else {
+			habit.streak = 0;
+		}
+
+		habit.longestStreak = longest;
+		return habit;
+	}
+
+	// 🔄 Convert Habit entity into API response
+	private toResponse(habit: Habit) {
+		const today = this.todayISO();
+		const completedDates = habit.records.map((r) => r.date);
 
 		return {
 			...habit,
-			completedToday,
-			streak,
-			longestStreak,
-			completedDates: dates, // virtual field for frontend
+			completedDates, // ✅ computed dynamically
+			completedToday: completedDates.includes(today),
 		};
 	}
 
+	// 📌 Find all habits for user
 	async findAllForUser(userId: string) {
 		const habits = await this.habitRepo.find({
 			where: { user: { id: userId } },
+			relations: ["records"],
 		});
-		return Promise.all(habits.map((h) => this.addComputedFields(h)));
+		return habits.map((h) => this.toResponse(this.recalcStreaks(h)));
 	}
 
+	// 📌 Create habit
 	async createForUser(user: User, dto: Partial<Habit>) {
 		const habit = this.habitRepo.create({ ...dto, user });
 		const saved = await this.habitRepo.save(habit);
-		return this.addComputedFields(saved);
+		saved.records = [];
+		return this.toResponse(this.recalcStreaks(saved));
 	}
 
+	// 📌 Update habit
 	async update(userId: string, id: string, updates: Partial<Habit>) {
 		const habit = await this.habitRepo.findOne({
 			where: { id, user: { id: userId } },
+			relations: ["records"],
 		});
 		if (!habit) throw new NotFoundException("Habit not found");
 
-		// only allow editable fields
 		const allowed = [
 			"name",
 			"description",
@@ -96,9 +114,10 @@ export class HabitsService {
 		}
 
 		const saved = await this.habitRepo.save(habit);
-		return this.addComputedFields(saved);
+		return this.toResponse(this.recalcStreaks(saved));
 	}
 
+	// 📌 Delete habit
 	async delete(userId: string, id: string) {
 		const res = await this.habitRepo.delete({
 			id,
@@ -108,31 +127,36 @@ export class HabitsService {
 		return { deleted: true };
 	}
 
+	// 📌 Toggle check-in
 	async checkin(userId: string, habitId: string, dateISO?: string) {
 		const habit = await this.habitRepo.findOne({
 			where: { id: habitId, user: { id: userId } },
+			relations: ["records"],
 		});
 		if (!habit) throw new NotFoundException("Habit not found");
 
-		const date = dateISO ?? new Date().toISOString().split("T")[0];
-
-		// check if already checked in
-		const existing = await this.recordRepo.findOne({
-			where: { habit: { id: habitId }, date },
-		});
+		const date = dateISO ?? this.todayISO();
+		const existing = habit.records.find((r) => r.date === date);
 
 		if (existing) {
-			// UNCHECK → delete record
+			// UNCHECK: remove record
 			await this.recordRepo.delete({ id: existing.id });
+			habit.records = habit.records.filter((r) => r.date !== date);
 		} else {
-			// CHECK-IN → add new record
+			// ✅ CHECK: add record
 			const rec = this.recordRepo.create({ date, habit });
 			await this.recordRepo.save(rec);
+			habit.records.push(rec);
 		}
 
-		return this.addComputedFields(habit);
+		// recalc streaks from updated records
+		this.recalcStreaks(habit);
+		await this.habitRepo.save(habit);
+
+		return this.toResponse(habit);
 	}
 
+	// 📌 Get habit records
 	async getRecords(
 		userId: string,
 		habitId: string,
@@ -149,24 +173,27 @@ export class HabitsService {
 		return qb.orderBy("r.date", "ASC").getMany();
 	}
 
+	// 📌 Stats
 	async stats(userId: string) {
 		const habits = await this.findAllForUser(userId);
 		const total = habits.length;
-		const today = new Date().toISOString().split("T")[0];
+		const today = this.todayISO();
+
 		const completedToday = habits.filter((h) =>
 			h.completedDates.includes(today)
 		).length;
 
-		// calculate completions in last 7 days
 		const last7 = new Date(Date.now() - 6 * 86400000)
 			.toISOString()
 			.split("T")[0];
+
 		let completions = 0;
 		habits.forEach((h) => {
 			completions += h.completedDates.filter((d) => d >= last7).length;
 		});
 
 		const weeklyRate = total === 0 ? 0 : completions / (total * 7);
+
 		return {
 			totalHabits: total,
 			completedToday,
