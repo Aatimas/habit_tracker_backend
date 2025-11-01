@@ -27,8 +27,8 @@ export class Habit {
   @Column({ default: 'daily' })
   frequency: 'daily' | 'weekly';
 
-  @Column('simple-array', { nullable: true })
-  targetDays?: number[];
+  // @Column('simple-array', { nullable: true })
+  // targetDays?: number[];
 
   @Column({ default: 0 })
   streak: number;

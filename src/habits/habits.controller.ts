@@ -16,16 +16,16 @@ import { CurrentUser } from "../common/decorators/user.decorator";
 @Controller("habits")
 @UseGuards(JwtAuthGuard)
 export class HabitsController {
-	constructor(private svc: HabitsService) {}
+	constructor(private habitService: HabitsService) {}
 
 	@Get()
 	async list(@CurrentUser() user: any) {
-		return this.svc.findAllForUser(user.id);
+		return this.habitService.findAllForUser(user.id);
 	}
 
 	@Post()
 	async create(@CurrentUser() user: any, @Body() body: any) {
-		return this.svc.createForUser(user, body);
+		return this.habitService.createForUser(user, body);
 	}
 
 	@Patch(":id")
@@ -34,21 +34,21 @@ export class HabitsController {
 		@Param("id") id: string,
 		@Body() body: any
 	) {
-		return this.svc.update(user.id, id, body); // should return the updated habit
+		return this.habitService.update(user.id, id, body); // should return the updated habit
 	}
 
 	@Delete(":id")
 	async delete(@CurrentUser() user: any, @Param("id") id: string) {
-		return this.svc.delete(user.id, id);
+		return this.habitService.delete(user.id, id);
 	}
 
-	@Post(":id/checkin")
-	async checkin(
+	@Post(":id/checkIn")
+	async checkIn(
 		@CurrentUser() user: any,
 		@Param("id") id: string,
 		@Body() body: any
 	) {
-		return this.svc.checkin(user.id, id, body?.date);
+		return this.habitService.checkIn(user.id, id, body?.date);
 	}
 
 	@Get(":id/records")
@@ -58,12 +58,12 @@ export class HabitsController {
 		@Query("from") from?: string,
 		@Query("to") to?: string
 	) {
-		return this.svc.getRecords(user.id, id, from, to);
+		return this.habitService.getRecords(user.id, id, from, to);
 	}
 	
 	@Get("stats")
 	async stats(@CurrentUser() user: any) {
-		return this.svc.stats(user.id);
+		return this.habitService.stats(user.id);
 	}
 }
 

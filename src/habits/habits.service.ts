@@ -12,13 +12,13 @@ export class HabitsService {
 		@InjectRepository(HabitRecord) private recordRepo: Repository<HabitRecord>
 	) {}
 
-	// 🔄 Utility: format today
+	// Utility: format today
 	private todayISO(): string {
 		return new Date().toISOString().split("T")[0];
 	}
 
-	// 🔄 Utility: recalculate streaks from records
-	private recalcStreaks(habit: Habit) {
+	// Utility: recalculate streaks from records
+	private reCalcStreaks(habit: Habit) {
 		const dates = habit.records.map((r) => r.date).sort(); // ascending
 		if (dates.length === 0) {
 			habit.streak = 0;
@@ -63,36 +63,36 @@ export class HabitsService {
 		return habit;
 	}
 
-	// 🔄 Convert Habit entity into API response
+	// Convert Habit entity into API response
 	private toResponse(habit: Habit) {
 		const today = this.todayISO();
 		const completedDates = habit.records.map((r) => r.date);
 
 		return {
 			...habit,
-			completedDates, // ✅ computed dynamically
+			completedDates, // computed dynamically
 			completedToday: completedDates.includes(today),
 		};
 	}
 
-	// 📌 Find all habits for user
+	// Find all habits for user
 	async findAllForUser(userId: string) {
 		const habits = await this.habitRepo.find({
 			where: { user: { id: userId } },
 			relations: ["records"],
 		});
-		return habits.map((h) => this.toResponse(this.recalcStreaks(h)));
+		return habits.map((h) => this.toResponse(this.reCalcStreaks(h)));
 	}
 
-	// 📌 Create habit
+	// Create habit
 	async createForUser(user: User, dto: Partial<Habit>) {
 		const habit = this.habitRepo.create({ ...dto, user });
 		const saved = await this.habitRepo.save(habit);
 		saved.records = [];
-		return this.toResponse(this.recalcStreaks(saved));
+		return this.toResponse(this.reCalcStreaks(saved));
 	}
 
-	// 📌 Update habit
+	// Update habit
 	async update(userId: string, id: string, updates: Partial<Habit>) {
 		const habit = await this.habitRepo.findOne({
 			where: { id, user: { id: userId } },
@@ -114,10 +114,10 @@ export class HabitsService {
 		}
 
 		const saved = await this.habitRepo.save(habit);
-		return this.toResponse(this.recalcStreaks(saved));
+		return this.toResponse(this.reCalcStreaks(saved));
 	}
 
-	// 📌 Delete habit
+	// Delete habit
 	async delete(userId: string, id: string) {
 		const res = await this.habitRepo.delete({
 			id,
@@ -127,8 +127,8 @@ export class HabitsService {
 		return { deleted: true };
 	}
 
-	// 📌 Toggle check-in
-	async checkin(userId: string, habitId: string, dateISO?: string) {
+	// Toggle check-in
+	async checkIn(userId: string, habitId: string, dateISO?: string) {
 		const habit = await this.habitRepo.findOne({
 			where: { id: habitId, user: { id: userId } },
 			relations: ["records"],
@@ -143,20 +143,20 @@ export class HabitsService {
 			await this.recordRepo.delete({ id: existing.id });
 			habit.records = habit.records.filter((r) => r.date !== date);
 		} else {
-			// ✅ CHECK: add record
+			// CHECK: add record
 			const rec = this.recordRepo.create({ date, habit });
 			await this.recordRepo.save(rec);
 			habit.records.push(rec);
 		}
 
-		// recalc streaks from updated records
-		this.recalcStreaks(habit);
+		// reCalc streaks from updated records
+		this.reCalcStreaks(habit);
 		await this.habitRepo.save(habit);
 
 		return this.toResponse(habit);
 	}
 
-	// 📌 Get habit records
+	// Get habit records
 	async getRecords(
 		userId: string,
 		habitId: string,
@@ -173,7 +173,7 @@ export class HabitsService {
 		return qb.orderBy("r.date", "ASC").getMany();
 	}
 
-	// 📌 Stats
+	// Stats
 	async stats(userId: string) {
 		const habits = await this.findAllForUser(userId);
 		const total = habits.length;
