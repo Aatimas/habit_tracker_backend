@@ -19,7 +19,7 @@ export class AuthService {
       throw new UnauthorizedException('Email already registered');
     }
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = this.usersRepo.create({ name, email, passwordHash });
+    const user = this.usersRepo.create({ name, email, password });
     await this.usersRepo.save(user);
     const token = this.signToken(user);
     return { token, user: this.sanitizeUser(user) };
@@ -29,7 +29,7 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     const user = await this.usersRepo.findOne({ where: { email } });
     if (!user) return null;
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    const valid = await bcrypt.compare(password, user.password);
     if (!valid) return null;
     return user;
   }

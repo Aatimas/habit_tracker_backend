@@ -4,6 +4,7 @@ import { Repository } from "typeorm";
 import { Habit } from "./habit.entity";
 import { HabitRecord } from "./habit-record.entity";
 import { User } from "../users/user.entity";
+import { toLocalISO } from "src/auth/utils/date";
 
 @Injectable()
 export class HabitsService {
@@ -13,8 +14,8 @@ export class HabitsService {
 	) {}
 
 	// Utility: format today
-	private todayISO(): string {
-		return new Date().toISOString().split("T")[0];
+	private todayISO() {
+		return toLocalISO();
 	}
 
 	// Utility: recalculate streaks from records
@@ -49,9 +50,7 @@ export class HabitsService {
 		// check if streak is "active" (ends today or yesterday)
 		const last = dates[dates.length - 1];
 		const today = this.todayISO();
-		const yesterday = new Date(Date.now() - 86400000)
-			.toISOString()
-			.split("T")[0];
+		const yesterday = toLocalISO(new Date(Date.now() - 86400000));
 
 		if (last === today || last === yesterday) {
 			habit.streak = current;
