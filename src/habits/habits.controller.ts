@@ -1,40 +1,69 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
-import { HabitsService } from './habits.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/user.decorator';
+import {
+	Controller,
+	Get,
+	Post,
+	Body,
+	Patch,
+	Param,
+	Delete,
+	UseGuards,
+	Query,
+} from "@nestjs/common";
+import { HabitsService } from "./habits.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { CurrentUser } from "../common/decorators/user.decorator";
 
-@Controller('habits')
+@Controller("habits")
 @UseGuards(JwtAuthGuard)
 export class HabitsController {
-  constructor(private svc: HabitsService) {}
+	constructor(private habitService: HabitsService) {}
 
-  @Get()
-  async list(@CurrentUser() user: any) {
-    return this.svc.findAllForUser(user.id);
-  }
+	@Get()
+	async list(@CurrentUser() user: any) {
+		return this.habitService.findAllForUser(user.id);
+	}
 
-  @Post()
-  async create(@CurrentUser() user: any, @Body() body: any) {
-    return this.svc.createForUser(user, body);
-  }
+	@Post()
+	async create(@CurrentUser() user: any, @Body() body: any) {
+		return this.habitService.createForUser(user, body);
+	}
 
-  @Patch(':id')
-  async update(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    return this.svc.update(user.id, id, body);
-  }
+	@Patch(":id")
+	async update(
+		@CurrentUser() user: any,
+		@Param("id") id: string,
+		@Body() body: any
+	) {
+		return this.habitService.update(user.id, id, body); // should return the updated habit
+	}
 
-  @Delete(':id')
-  async delete(@CurrentUser() user: any, @Param('id') id: string) {
-    return this.svc.delete(user.id, id);
-  }
+	@Delete(":id")
+	async delete(@CurrentUser() user: any, @Param("id") id: string) {
+		return this.habitService.delete(user.id, id);
+	}
 
-  @Post(':id/checkin')
-  async checkin(@CurrentUser() user: any, @Param('id') id: string, @Body() body: any) {
-    return this.svc.checkin(user.id, id, body?.date);
-  }
+	@Post(":id/checkIn")
+	async checkIn(
+		@CurrentUser() user: any,
+		@Param("id") id: string,
+		@Body() body: any
+	) {
+		return this.habitService.checkIn(user.id, id, body?.date);
+	}
 
-  @Get(':id/records')
-  async records(@CurrentUser() user: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string) {
-    return this.svc.getRecords(user.id, id, from, to);
-  }
+	@Get(":id/records")
+	async records(
+		@CurrentUser() user: any,
+		@Param("id") id: string,
+		@Query("from") from?: string,
+		@Query("to") to?: string
+	) {
+		return this.habitService.getRecords(user.id, id, from, to);
+	}
+	
+	@Get("stats")
+	async stats(@CurrentUser() user: any) {
+		return this.habitService.stats(user.id);
+	}
 }
+

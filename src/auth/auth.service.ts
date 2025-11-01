@@ -12,6 +12,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+//create new user
   async register(name: string, email: string, password: string) {
     const existing = await this.usersRepo.findOne({ where: { email } });
     if (existing) {
@@ -24,6 +25,7 @@ export class AuthService {
     return { token, user: this.sanitizeUser(user) };
   }
 
+//validate user credentials
   async validateUser(email: string, password: string) {
     const user = await this.usersRepo.findOne({ where: { email } });
     if (!user) return null;
@@ -32,6 +34,7 @@ export class AuthService {
     return user;
   }
 
+//login user
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
     if (!user) throw new UnauthorizedException('Invalid credentials');
@@ -39,11 +42,13 @@ export class AuthService {
     return { token, user: this.sanitizeUser(user) };
   }
 
+//sign JWT token
   signToken(user: User) {
     const payload = { sub: user.id, email: user.email };
     return this.jwtService.sign(payload);
   }
 
+  //sanitize user object
   sanitizeUser(user: User) {
     const { passwordHash, ...rest } = user as any;
     rest.createdAt = user.createdAt?.toISOString?.() || new Date().toISOString();
