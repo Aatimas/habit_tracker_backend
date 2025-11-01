@@ -25,7 +25,7 @@ export class Habit {
   category: string;
 
   @Column({ default: 'daily' })
-  frequency: 'daily' | 'weekly';
+  frequency: string;
 
   // @Column('simple-array', { nullable: true })
   // targetDays?: number[];

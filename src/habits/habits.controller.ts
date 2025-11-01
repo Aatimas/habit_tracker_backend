@@ -25,7 +25,7 @@ export class HabitsController {
 
 	@Post()
 	async create(@CurrentUser() user: any, @Body() body: any) {
-		return this.habitService.createForUser(user, body);
+		return this.habitService.create(user, body);
 	}
 
 	@Patch(":id")

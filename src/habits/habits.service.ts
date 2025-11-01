@@ -85,7 +85,7 @@ export class HabitsService {
 	}
 
 	// Create habit
-	async createForUser(user: User, dto: Partial<Habit>) {
+	async create(user: User, dto: Partial<Habit>) {
 		const habit = this.habitRepo.create({ ...dto, user });
 		const saved = await this.habitRepo.save(habit);
 		saved.records = [];
