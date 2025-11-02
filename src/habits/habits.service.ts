@@ -4,7 +4,7 @@ import { Repository } from "typeorm";
 import { Habit } from "./habit.entity";
 import { HabitRecord } from "./habit-record.entity";
 import { User } from "../users/user.entity";
-import { toLocalISO } from "src/auth/utils/date";
+import { toLocalISO } from "src/utils/date";
 
 @Injectable()
 export class HabitsService {
